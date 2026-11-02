@@ -390,10 +390,20 @@ internal static partial class PreviewTable {
         new Template("PuzzleVanillaItem Football", new V3(1f, 1f, 1f), new Part[] {
             new Part("footy", 1004, new V3(0f, 0f, 0f), new Q(-0.706983f, 0f, 0f, 0.70723f), new V3(1f, 1f, 1f), new[] { Kind.VertexColor }),   // FootyKernal/footy
         }),
+        new Template("PuzzleHook WallHook", new V3(1f, 1f, 1f), new Part[] {
+            new Part("hook", 124, new V3(0f, 0f, -0.098f), new Q(0.5f, 0.5f, 0.5f, 0.5f), new V3(1f, 1f, 1f), new[] { Kind.Plain }),   // WallHookCollider/hook
+        }),
+        new Template("PuzzleHook PackHanger", new V3(1f, 1f, 1f), new Part[] {
+            new Part("BackpackHanger", 733, new V3(0f, -2f, 0f), new Q(-0.707107f, 0f, 0f, 0.707107f), new V3(1f, 1f, 1f), new[] { Kind.VertexColor }),   // BackpackHanger (1)
+        }),
+        new Template("PuzzleSign", new V3(1f, 1f, 1f), new Part[] {
+            new Part("board_fineprint", 24, new V3(0f, 0f, 0f), new Q(-0.707107f, 0f, 0f, 0.707106f), new V3(1f, 1f, 1f), new[] { Kind.VertexColor }),   // board
+        }),
     };
 
     // Every mesh the previews use, with the vertex count of the right copy
     internal static readonly (string name, int vertices)[] Meshes = {
+        ("BackpackHanger", 733),
         ("BasicPushButton", 247),
         ("BasicPushButtonCase", 706),
         ("BezierCircle.001", 674),
@@ -446,6 +456,7 @@ internal static partial class PreviewTable {
         ("belt_hung", 1310),
         ("binoculars", 3794),
         ("blank.001", 5805),
+        ("board_fineprint", 24),
         ("box-base", 1196),
         ("box-lid", 424),
         ("buoy", 730),
@@ -473,6 +484,7 @@ internal static partial class PreviewTable {
         ("flaregunbarrel", 1063),
         ("flareguntimer", 18),
         ("footy", 1004),
+        ("hook", 124),
         ("kettle", 2404),
         ("knob", 357),
         ("lamp_red", 605),

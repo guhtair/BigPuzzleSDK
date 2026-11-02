@@ -294,6 +294,18 @@ namespace BigPuzzleSDK {
                 ["PuzzleVanillaItem Blindfold"] = new[] {
                     "LandmarksPlayerCountAny/BlindfoldCatwalk/Positioner/BlindfoldProp",
                     "LandmarksPlayerCountAny/BlindfoldFishTrap/Positioner/BlindfoldProp" },
+                ["PuzzleSign"] = new[] {
+                    "LandmarksNonChallenge/SpawnCourtyardandHubPlatform/Positioner/TeachingArea/Positioner/ObjectsTeaching/Fineprint_Poses" },
+                ["PuzzleHook WallHook"] = new[] {
+                    "LandmarksPlayerCountAny/CoordinatesHolding/PositionerStart/WallhookWithPermoSign/WallHook",
+                    "LandmarksPlayerCountAny/CoordinatesSimPress/Positioner/WallhookWithPermoSign/WallHook",
+                    "TrainSystem/TrainStop - South Valley Beach/WallHook",
+                    "TrainSystem/TrainStop - Green Diffuser/WallHook",
+                    "TrainSystem/TrainStop - Sports Valley/WallHook" },
+                ["PuzzleHook PackHanger"] = new[] {
+                    "LandmarksNonChallenge/PackPavillions/VerekerBackpackPavillion /PackPavilion Holster/PackHanger",
+                    "LandmarksNonChallenge/PackPavillions/UndergroundBackpackPavilion/PackPavilion Holster/PackHanger",
+                    "LandmarksNonChallenge/PackPavillions/ForestBackpackPavilion/BackpackPavilion/PackHanger" },
                 ["PuzzleVanillaItem FoldingChair"] = new[] {
                     "LandmarksPlayerCount4/Contents/ConductorConcert/Positioner/Room_Outside/foldingChair",
                     "LandmarksNonChallenge/SpeakerStage/Positioner/foldingChair" },

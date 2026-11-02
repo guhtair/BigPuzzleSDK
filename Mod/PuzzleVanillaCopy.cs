@@ -62,6 +62,7 @@ public class PuzzleVanillaCopy : MonoBehaviour {
     private string TemplateKey {
         get {
             PuzzleNoItemsGate gate = this as PuzzleNoItemsGate;
+            if (this is PuzzleHook hookTemplate) return "PuzzleHook " + (hookTemplate.UsesPackHanger ? "PackHanger" : "WallHook");
             if (gate != null && gate.blindMask) return "PuzzleNoItemsGate BlindMask";   // made one-way in MakeOneWay
             if (gate != null && !gate.oneWay) return "PuzzleNoItemsGate TwoWay";
             if (this is PuzzleVanillaItem pedestal && pedestal.itemType == PuzzleVanillaItemType.BuoyRed) return "PuzzleBuoyLight Red";
@@ -100,6 +101,7 @@ public class PuzzleVanillaCopy : MonoBehaviour {
     // Called by the loader while the puzzle is still inactive
     internal void SetupCopy(int index) {
         var log = Plugin.log;
+        if (this is PuzzleHook hookPrepare) hookPrepare.Prepare();
         if (!TemplatePaths.TryGetValue(TemplateKey, out string[] paths)) {
             log.LogWarning($"[{Kind}] has no template path.");
             return;
@@ -148,6 +150,8 @@ public class PuzzleVanillaCopy : MonoBehaviour {
         if (this is PuzzleCountInput counter) counter.SetupCounter(copy);
         if (this is PuzzleButtonNHold nhold) nhold.SetupButton(copy);
         if (this is PuzzleItem item) item.SetupItem(copy);
+        if (this is PuzzleHook hookCopy) hookCopy.SetupHook(copy);
+        if (this is PuzzleSign signCopy) signCopy.SetupSign(copy);
         if (this is PuzzleCountValidator screen) screen.SetupScreen(copy);
         PuzzleCirclePeg peg = this as PuzzleCirclePeg;
         if (peg != null) peg.ApplyColor(copy);
@@ -398,6 +402,7 @@ public class PuzzleVanillaCopy : MonoBehaviour {
         if (this is PuzzleCountInput countInput) countInput.Watch();
         if (this is PuzzleButtonNHold nhold) nhold.Watch();
         if (this is PuzzleItem item) item.Watch();
+        if (this is PuzzleHook hookWatch) hookWatch.Watch();
         if (this is PuzzleVanillaItem vanillaItemWatch) { vanillaItemWatch.Watch(); vanillaItemWatch.ApplyPending(); vanillaItemWatch.ApplyLight(); vanillaItemWatch.WatchFlare(); vanillaItemWatch.WatchTorch(); vanillaItemWatch.WatchColor(); }
         if (this is PuzzleFireworkLauncher launcherWatch) launcherWatch.WatchFired();
         FlareSweep.Tick();
@@ -507,6 +512,7 @@ public class PuzzleVanillaItem : PuzzleVanillaCopy, ISavedHeld {
     private bool Find() {
         if (prop != null) return true;
         prop = FirstProp(out itemId);
+        if (prop != null) PuzzleHook.NoteKind(prop, itemType);
         return prop != null;
     }
 

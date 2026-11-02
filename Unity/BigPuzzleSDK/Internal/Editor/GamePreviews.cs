@@ -30,7 +30,7 @@ public static class GamePreviews {
         "PuzzleVanillaItem", "PuzzleCountInput", "PuzzleCountValidator", "PuzzleIntercom", "PuzzleIntercomSpeaker",
         "PuzzleSoundPeg", "PuzzleSoundPegAnswer", "PuzzleNoItemsGate", "PuzzleCirclePeg",
         "PuzzleCirclePegBoard", "PuzzleTimerSpawner", "PuzzleTimerGoal",
-        "PuzzleFireworkLauncher", "PuzzleButtonNHold",
+        "PuzzleFireworkLauncher", "PuzzleButtonNHold", "PuzzleHook", "PuzzleSign",
     };
 
     // One preview: a hidden, unparented object that follows its SDK component around
@@ -99,7 +99,7 @@ public static class GamePreviews {
 
     // Most components always use the game's own size in-game, so their object's scale is kept
     // at 1,1,1 to avoid a placeholder that looks bigger or smaller than what players will see.
-    // Only the timer and the progress bar can be scaled.
+    // Only the timer, the progress bar and the glass can be scaled.
     private static readonly HashSet<int> toldAboutScale = new HashSet<int>();
 
     private static void KeepUnscaled(MonoBehaviour c) {
@@ -110,7 +110,7 @@ public static class GamePreviews {
         EditorUtility.SetDirty(t);
         if (toldAboutScale.Add(c.GetInstanceID()))
             Debug.Log($"[PuzzleSDK] '{c.name}': {c.GetType().Name} always uses the game's own size, so its scale stays at 1,1,1. " +
-                      "(Only PuzzleTimer, PuzzleProgressBar and PuzzleGlass can be scaled.)", c);
+                      "(Only PuzzleTimer, PuzzleProgressBar and PuzzleGlass can be scaled; the Puzzle Sign has a Size field.)", c);
     }
 
     // Moves every preview to where its component is now
@@ -167,6 +167,11 @@ public static class GamePreviews {
     // Which vanilla template a component copies
     internal static string LabelFor(MonoBehaviour c) {
         string type = c.GetType().Name;
+        if (type == "PuzzleHook") {   // Hook Type: the wall hook, the backpack hanger, or nothing (Invisible has no template)
+            SerializedProperty ht = new SerializedObject(c).FindProperty("hookType");
+            int hi = ht != null && ht.propertyType == SerializedPropertyType.Enum ? ht.enumValueIndex : 0;
+            return hi == 1 ? "PuzzleHook PackHanger" : hi == 2 ? "PuzzleHook Invisible" : "PuzzleHook WallHook";
+        }
         if (type == "PuzzleTelescope") {   // the plain telescope when Invisible Ink View is off
             SerializedProperty lv = new SerializedObject(c).FindProperty("invisibleInkView");
             return lv != null && !lv.boolValue ? "PuzzleTelescope Normal" : type;
@@ -230,6 +235,8 @@ public static class GamePreviews {
             key += "|" + tileImage.Key;
         }
         Color tint = Color.white;
+        if (c.GetType().Name == "PuzzleSign") key += "|" + SignSize(c);   // Size is the board's: rebuilt when it changes
+        if (c.GetType().Name == "PuzzleVanillaItem" && (label.EndsWith("PermoSign") || label.EndsWith("SpareSign"))) key += "|" + DefaultText(c);
         if (c.GetType().Name == "PuzzleVanillaItem") {   // Kettle and Walkie Talkie: the chosen colour
             tint = ItemTint(c, label);
             key += "|" + ColorUtility.ToHtmlStringRGB(tint);
@@ -314,6 +321,14 @@ public static class GamePreviews {
             }
             renderer.sharedMaterials = mats;
             built++;
+        }
+
+        if (owner.GetType().Name == "PuzzleVanillaItem" && (key.StartsWith("PuzzleVanillaItem PermoSign") || key.StartsWith("PuzzleVanillaItem SpareSign")))
+            MakeItemSignText(root.transform, DefaultText(owner), owner.gameObject.layer, key.StartsWith("PuzzleVanillaItem PermoSign"));
+        if (owner.GetType().Name == "PuzzleSign") {   // Size resizes the board (its own axes: width, thickness, height; the thickness stays); the TextMeshPro is the creator's own
+            Transform board = root.transform.Find(Prefix + " board_fineprint");
+            Vector2 size = SignSize(owner);
+            if (board != null) board.localScale = new Vector3(size.x, 1f, size.y);
         }
 
         var preview = new Preview {
@@ -481,6 +496,59 @@ public static class GamePreviews {
         foreach (Transform child in go.transform) child.gameObject.hideFlags = HideFlags.HideAndDontSave;   // TMP sub-meshes
     }
     private static bool warnedFont;
+
+    private static string DefaultText(MonoBehaviour item) {
+        SerializedProperty p = new SerializedObject(item).FindProperty("defaultText");
+        return p != null ? p.stringValue ?? "" : "";
+    }
+
+    // The Default Text on a Permo Sign (white, centred, one line per line) or a Spare Sign (black, centred, wrapped), with the game's box,
+    // size, spacing and place. The game's fonts (Manrope, Courier Prime Sans) aren't here, so the letter widths differ a little.
+    private static void MakeItemSignText(Transform root, string content, int layer, bool permo) {
+        if (string.IsNullOrEmpty(content)) return;
+        TMP_FontAsset font = TMP_Settings.defaultFontAsset;
+        if (font == null) {
+            if (!warnedFont) Debug.LogWarning("[PuzzleSDK] Sign preview: no TextMesh Pro font found (Window > TextMeshPro > Import TMP Essential Resources).");
+            warnedFont = true;
+            return;
+        }
+        var go = new GameObject(Prefix + " sign text") { hideFlags = HideFlags.HideAndDontSave, layer = layer };
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = permo ? new Vector3(0f, -0.02f, 0.025f) : new Vector3(0f, 0f, 0.013f);
+        go.transform.localRotation = new Quaternion(0f, 1f, 0f, 0f);   // faces the front of the sign
+        var text = go.AddComponent<TextMeshPro>();
+        text.font = font;
+        text.text = permo ? System.Text.RegularExpressions.Regex.Replace(content, "<font=[^>]*>", "") : content;
+        text.alignment = TextAlignmentOptions.Center;
+        text.margin = Vector4.zero;
+        if (permo) {
+            text.color = Color.white;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = 0.01f;
+            text.fontSizeMax = 1.5f;
+            text.fontSize = 1.15f;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.overflowMode = TextOverflowModes.Overflow;
+            text.lineSpacing = 20f;
+            text.richText = true;
+            text.rectTransform.sizeDelta = new Vector2(1.00f, 0.35f);
+        } else {
+            text.color = Color.black;
+            text.enableAutoSizing = false;
+            text.fontSize = 1f;
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.overflowMode = TextOverflowModes.Truncate;
+            text.lineSpacing = -15f;
+            text.richText = false;
+            text.rectTransform.sizeDelta = new Vector2(1.00f, 0.72f);
+        }
+        foreach (Transform child in go.transform) child.gameObject.hideFlags = HideFlags.HideAndDontSave;   // TMP sub-meshes
+    }
+
+    private static Vector2 SignSize(MonoBehaviour sign) {
+        SerializedProperty p = new SerializedObject(sign).FindProperty("size");
+        return p != null && p.propertyType == SerializedPropertyType.Vector2 ? p.vector2Value : Vector2.one;
+    }
 
     private static Material dotMaterial;
     internal static Material DotMaterial() {

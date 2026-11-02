@@ -12,7 +12,7 @@ public enum PuzzleSeatPose { MidcenturyChair, FoldingChair, WoodenChair, Listeni
 // A seat players click to sit in (Jump to stand). Put it where a player's bottom should go. Players
 // click anywhere in the blue box. Your own model stays as it is; the editor only draws the box.
 [PuzzleInfo("A seat players click to sit in; they stand with Jump.\nSet where the player sits (green marker) and which way they face, and size the blue click box around your model.")]
-[AddComponentMenu("Big Puzzle SDK/Seat")]
+[AddComponentMenu("Big Puzzle SDK/Custom Chair")]
 public class PuzzleSeat : MonoBehaviour {
     [Tooltip("How the player sits (the game's own seats: chairs, couch, benches, stump, carousel pony, chairlift, train seats).")]
     [SerializeField] private PuzzleSeatPose pose = PuzzleSeatPose.MidcenturyChair;

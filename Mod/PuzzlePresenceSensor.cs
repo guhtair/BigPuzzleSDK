@@ -21,13 +21,11 @@ public class PuzzlePresenceSensor : PuzzleButtonBase {
     private PuzzleEvent onPlayerLeft;
 
     private const float CheckSeconds = 0.1f;
-    private const float PlayerListSeconds = 1f;   // how often the list of players is looked up again
 
     private readonly List<Collider> volumes = new List<Collider>();
-    private readonly List<PlayerCharacter> players = new List<PlayerCharacter>();
     private HashSet<uint> inside = new HashSet<uint>();
+    private HashSet<uint> now = new HashSet<uint>();   // swapped with inside each check, so nothing is allocated
     private float nextCheck;
-    private float nextPlayerList;
     private bool pressed;
     internal bool IsHeld { get { return pressed; } }   // enough players are inside right now
     private bool set;
@@ -59,25 +57,21 @@ public class PuzzlePresenceSensor : PuzzleButtonBase {
         if (!PuzzleSDK.IsHost || volumes.Count == 0 || Time.time < nextCheck) return;
         nextCheck = Time.time + CheckSeconds;
 
-        if (Time.time >= nextPlayerList) {
-            nextPlayerList = Time.time + PlayerListSeconds;
-            players.Clear();
-            foreach (UnityEngine.Object o in Resources.FindObjectsOfTypeAll(Il2CppType.Of<PlayerCharacter>())) {
-                PlayerCharacter pc = o != null ? o.TryCast<PlayerCharacter>() : null;
-                if (pc != null && pc.gameObject.scene.IsValid()) players.Add(pc);
-            }
-        }
-
-        var now = new HashSet<uint>();
-        foreach (PlayerCharacter pc in players) {
+        // The game keeps its own list of the players, so there is nothing to search for
+        now.Clear();
+        var characters = PlayerCharacter.allPlayerCharacters;
+        for (int i = 0; characters != null && i < characters.Count; i++) {
+            PlayerCharacter pc = characters[i];
             if (pc == null) continue;
-            NetworkIdentity id = pc.GetComponent<NetworkIdentity>();
-            if (id != null && IsInside(pc.transform.position)) now.Add(id.netId);
+            PlayerNetworking net = pc.playerNetworking;
+            if (net != null && IsInside(pc.transform.position)) now.Add(net.netId);
         }
 
         foreach (uint id in now) if (!inside.Contains(id) && onPlayerEntered != null) onPlayerEntered.Invoke();
         foreach (uint id in inside) if (!now.Contains(id) && onPlayerLeft != null) onPlayerLeft.Invoke();
+        HashSet<uint> swap = inside;
         inside = now;
+        now = swap;
 
         bool shouldBePressed = inside.Count >= Math.Max(1, requiredPlayers);
         if (shouldBePressed == pressed) return;

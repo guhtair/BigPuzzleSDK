@@ -9,7 +9,7 @@ namespace BigPuzzleSDK {
 // A button that players press by standing in it. Add a Box (or other) Collider sized to the area.
 [PuzzleInfo("Presses when enough players stand inside this object's collider(s), and releases when too few are left. Make the collider at least 2 m tall, starting at the floor. It becomes an invisible trigger in-game. It can be used anywhere a button can, including Press In Order.")]
 [RequireComponent(typeof(Collider))]
-[AddComponentMenu("Big Puzzle SDK/Presence Sensor")]
+[AddComponentMenu("")]   // hidden from Add Component: comes from the prefab
 public class PuzzlePresenceSensor : PuzzleButtonBase {
     [Tooltip("Players needed inside at the same time to press it.")]
     [Min(1)]

@@ -27,7 +27,7 @@ using static PropertyBlockHelper;
 namespace BigPuzzleSDK {
     [BepInPlugin("markviews.BigPuzzleSDK", "Big Puzzle SDK", Version)]
     public class Plugin : BasePlugin {
-        internal const string Version = "0.1.4";
+        internal const string Version = "0.1.5";
 
         internal static ManualLogSource log;
 
@@ -1829,7 +1829,9 @@ namespace BigPuzzleSDK {
             try {
                 MethodInfo target = AccessTools.Method(typeof(PropHome), GameRefs.Hooks.IsSafeToPlace);
                 if (target == null) throw new MissingMethodException("PropHome.IsSafeToPlace not found");
-                harmony.Patch(target, postfix: new HarmonyMethod(typeof(ModGourd).GetMethod(nameof(SafeToPlacePostfix), BindingFlags.Static | BindingFlags.NonPublic)));
+                harmony.Patch(target,
+                    prefix: new HarmonyMethod(typeof(ModGourd).GetMethod(nameof(SafeToPlacePrefix), BindingFlags.Static | BindingFlags.NonPublic)),
+                    postfix: new HarmonyMethod(typeof(ModGourd).GetMethod(nameof(SafeToPlacePostfix), BindingFlags.Static | BindingFlags.NonPublic)));
             } catch (Exception ex) {
                 Plugin.log.LogWarning($"[Gourd] could not hook PropHome.IsSafeToPlace ({ex.GetType().Name}: {ex.Message}); a refused gourd is dropped instead");
             }
@@ -1839,7 +1841,9 @@ namespace BigPuzzleSDK {
             try {
                 MethodInfo target = AccessTools.Method(typeof(CastableOutcome), GameRefs.Hooks.MatchesConditions);
                 if (target == null) throw new MissingMethodException("CastableOutcome.MatchesConditions not found");
-                harmony.Patch(target, postfix: new HarmonyMethod(typeof(ModGourd).GetMethod(nameof(OutcomePostfix), BindingFlags.Static | BindingFlags.NonPublic)));
+                harmony.Patch(target,
+                    prefix: new HarmonyMethod(typeof(ModGourd).GetMethod(nameof(OutcomePrefix), BindingFlags.Static | BindingFlags.NonPublic)),
+                    postfix: new HarmonyMethod(typeof(ModGourd).GetMethod(nameof(OutcomePostfix), BindingFlags.Static | BindingFlags.NonPublic)));
             } catch (Exception ex) {
                 Plugin.log.LogWarning($"[Gourd] could not hook CastableOutcome.MatchesConditions ({ex.GetType().Name}: {ex.Message}); a refused gourd is dropped instead");
             }
@@ -1847,6 +1851,21 @@ namespace BigPuzzleSDK {
             // Safety net, in case a placement does not go through that check
             Block(harmony, GameRefs.Hooks.ServerSetPinned);          // the host's decision
             Block(harmony, GameRefs.Hooks.PredictivelyPlaceInHome);  // a player's own prediction, so it does not snap in for a moment
+        }
+
+        // A hook of ours that takes the held prop gives it the hook's group before the game looks at it
+        private static void OutcomePrefix(CastableOutcome __instance, PlayerCharacter playerCharacter) {
+            try {
+                if (__instance == null || playerCharacter == null) return;
+                PropHome home = __instance.propHome;
+                PlayerHands hands = playerCharacter.hands;
+                Prop held = hands != null ? hands.heldProp : null;
+                if (home != null && held != null) PuzzleHook.Prime(held, home);
+            } catch (Exception) { }
+        }
+
+        private static void SafeToPlacePrefix(PropHome __instance, Prop prop) {
+            try { PuzzleHook.Prime(prop, __instance); } catch (Exception) { }
         }
 
         private static void OutcomePostfix(CastableOutcome __instance, PlayerCharacter playerCharacter, ref bool __result) {
@@ -1868,6 +1887,8 @@ namespace BigPuzzleSDK {
         private static bool Allowed(Prop prop, PropHome home) {
             if (prop == null || home == null) return true;
             if (moddedProps.Count == 0 && moddedHomes.Count == 0) return true;
+            // A hook decides for itself what it takes (the game's items and ours alike)
+            if (PuzzleHook.Decide(prop, home, out bool hookAnswer)) return hookAnswer;
             // A player's belt, backpack and head (the blindfold) take modded items too (not gourds, which are kept with their own holders)
             try {
                 bool pocket = home.isInventory || home.name.StartsWith("GoesIn") || home.pinGroup.ToString().StartsWith("GoesIn")

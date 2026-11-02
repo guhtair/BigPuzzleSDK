@@ -139,6 +139,15 @@ internal static class PuzzleChecks {
                 else if (PuzzleOf(source) != PuzzleOf(c)) list.Add($"Copy Display '{source.name}' is in another puzzle, so this display can't follow it.");
             }
         }
+        if (c is PuzzleHook) {
+            var so = new SerializedObject(c);
+            SerializedProperty hung = so.FindProperty("defaultItem");
+            UnityEngine.Object given = hung != null ? hung.objectReferenceValue : null;
+            if (given != null && !(given is PuzzleVanillaItem) && !(given is PuzzleItem))
+                list.Add("Default Item must be a Vanilla Item or a Custom Item. '" + given.name + "' is neither, so the hook will start empty.");
+            else if (given != null && PuzzleOf(c) != PuzzleOf((Component)given))
+                list.Add("Default Item '" + given.name + "' is in another puzzle, so it can't be hung on this hook.");
+        }
         if (c is PuzzleSwitch toggle) CheckPair(toggle, "onTurnedOn", "On Turned On", "onTurnedOff", "On Turned Off", list, IsTwoState);
 
         if (c is AudioSource audio && audio.maxDistance > LargeAudioDistance)
@@ -526,6 +535,54 @@ internal class PuzzleComponentEditor : Editor {
 [CustomEditor(typeof(PuzzleTelescope))] internal class PuzzleTelescopeEditor : PuzzleComponentEditor { }
 [CustomEditor(typeof(PuzzleSeat))] internal class PuzzleSeatEditor : PuzzleComponentEditor { }
 [CustomEditor(typeof(PuzzleItem))] internal class PuzzleItemEditor : PuzzleComponentEditor { }
+[CustomEditor(typeof(PuzzleHook))] internal class PuzzleHookEditor : PuzzleComponentEditor { }
+// The sign's text keeps up with the board: when Size changes, the text box (the TextMeshPro child) is resized and moved to match,
+// if it still sits where the editor put it. "Fix text to board" does it by hand whatever the box was.
+[CustomEditor(typeof(PuzzleSign))]
+internal class PuzzleSignEditor : PuzzleComponentEditor {
+    // Where the text box sits on a board of this size: the game's box (0.70 x 1.00) at the game's spot, stretched with the board
+    private static void BoxFor(Vector2 size, out Vector2 box, out Vector3 position) {
+        box = new Vector2(0.70f * Mathf.Abs(size.x), 1.00f * Mathf.Abs(size.y));
+        position = new Vector3(0.01f * size.x, 0.05f * size.y, -0.025f);
+    }
+
+    // The sign's text: its first TextMeshPro child (found by name: this assembly doesn't reference TextMesh Pro)
+    private static RectTransform TextOf(Component sign) {
+        foreach (Transform t in sign.GetComponentsInChildren<Transform>(true))
+            if (t != sign.transform && t.GetComponent("TextMeshPro") != null) return t as RectTransform;
+        return null;
+    }
+
+    // Moves the text from the box that fitted 'from' to the one that fits 'to'. Unless 'force', only if it is still where the editor put it.
+    private static bool Fit(Component sign, Vector2 from, Vector2 to, bool force) {
+        RectTransform rt = TextOf(sign);
+        if (rt == null) return false;
+        BoxFor(from, out Vector2 oldBox, out Vector3 oldPosition);
+        if (!force && ((rt.sizeDelta - oldBox).sqrMagnitude > 0.0001f || (rt.localPosition - oldPosition).sqrMagnitude > 0.0001f)) return false;
+        BoxFor(to, out Vector2 box, out Vector3 position);
+        Undo.RecordObject(rt, "Fit sign text");
+        rt.sizeDelta = box;
+        rt.localPosition = position;
+        EditorUtility.SetDirty(rt);
+        return true;
+    }
+
+    public override void OnInspectorGUI() {
+        serializedObject.Update();
+        SerializedProperty sizeProp = serializedObject.FindProperty("size");
+        Vector2 before = sizeProp != null ? sizeProp.vector2Value : Vector2.one;
+        base.OnInspectorGUI();
+        serializedObject.Update();
+        Vector2 after = sizeProp != null ? sizeProp.vector2Value : Vector2.one;
+        if (after != before) Fit((Component)target, before, after, false);
+        EditorGUILayout.Space(2);
+        bool hasText = TextOf((Component)target) != null;
+        using (new EditorGUI.DisabledScope(!hasText)) {
+            if (GUILayout.Button(new GUIContent("Fix text to board", "Moves and resizes the text box (the TextMeshPro child) to cover the board again, with the game's margins."))) Fit((Component)target, after, after, true);
+        }
+        if (!hasText) EditorGUILayout.HelpBox("No TextMeshPro child found: nothing to fit.", MessageType.None);
+    }
+}
 // Says where a display's picture comes from
 [CustomEditor(typeof(PuzzleDisplay))]
 internal class PuzzleDisplayEditor : PuzzleComponentEditor {
